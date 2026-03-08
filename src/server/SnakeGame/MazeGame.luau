@@ -7,6 +7,7 @@ local _Shared     = ReplicatedStorage:WaitForChild('SGH'):WaitForChild('Shared')
 local TimerModule = require(_Shared:WaitForChild('TimerModule'))
 local ScoreModule = require(_Shared:WaitForChild('ScoreModule'))
 local PathModule  = require(_Shared:WaitForChild('PathfindingModule'))
+local computePath = PathModule.computePath
 
 local MazeGame = {}
 
