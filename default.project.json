@@ -1,0 +1,39 @@
+{
+  "name": "neon-snake-arena",
+  "tree": {
+    "$className": "DataModel",
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "TestLeaderboard": {
+        "$path": "src/server/TestLeaderboard.server.luau"
+      },
+      "SnakeGame": {
+        "$path": "src/server/SnakeGame"
+      },
+      "SGH_Core": {
+        "$path": "src/server/SGH_Core"
+      }
+    },
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "SnakeGame": {
+        "$path": "src/shared/SnakeGame"
+      },
+      "SGH": {
+        "$path": "src/shared/SGH"
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "SnakeClient": {
+          "$path": "src/client/SnakeClient"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# Roblox place/model files (large binaries, not useful in git)
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Rojo session lockfile (machine-specific)
+*.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
