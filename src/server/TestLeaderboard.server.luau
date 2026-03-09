@@ -6,12 +6,13 @@
   REQUIREMENT: File → Game Settings → Security → enable "Studio Access to API Services"
   (otherwise require(LeaderboardService) will fail because DataStore is disabled).
 ]]
-local SnakeGame = game.ServerScriptService:FindFirstChild("SnakeGame")
-if not SnakeGame then
-	warn("[TestLeaderboard] ServerScriptService.SnakeGame not found")
+local Games = game.ServerScriptService:FindFirstChild("Games")
+local Snake = Games and Games:FindFirstChild("Snake")
+if not Snake then
+	warn("[TestLeaderboard] ServerScriptService.Games.Snake not found")
 	return
 end
-local LeaderboardService = SnakeGame:FindFirstChild("LeaderboardService")
+local LeaderboardService = Snake:FindFirstChild("LeaderboardService")
 if not LeaderboardService then
 	warn("[TestLeaderboard] LeaderboardService ModuleScript not found")
 	return

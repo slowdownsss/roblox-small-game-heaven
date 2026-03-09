@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("SnakeGame"):WaitForChild("Config"))
+local GameRegistry = require(ReplicatedStorage:WaitForChild("SGH"):WaitForChild("GameRegistry"))
 local WorldBuilder = {}
 local folder; local NEON=Enum.Material.Neon; local SMOOTH=Enum.Material.SmoothPlastic; local CONCRETE=Enum.Material.Concrete
 local W=Config.WORLD_HALF
@@ -131,44 +132,110 @@ local function buildArena()
 	local bbl=Instance.new("TextLabel"); bbl.Size=UDim2.new(1,0,1,0); bbl.BackgroundTransparency=1; bbl.Text="SNAKE ARENA\n[E] ENTER"; bbl.TextColor3=Color3.fromRGB(57,255,20); bbl.Font=Enum.Font.GothamBlack; bbl.TextScaled=true; bbl.Parent=bb
 	return prompt(kiosk,"Snake Arena",Enum.KeyCode.E,35)
 end
+-- Shared arch entrance builder — used by every mini-game district.
+-- Produces a 36-stud arch, large sign, approach marker, and kiosk with prompt.
+-- To add a new game: call buildDistrict(cx,cz,name,color,size) and wire the prompt.
+local ARCH_H = 36   -- pillar height (studs)
+local ARCH_W = 15   -- pillar offset from arch center (span = ARCH_W*2)
+local function buildArch(ex, ez, isXAxis, dir, name, color)
+	-- ex/ez = position of arch center on the entry face
+	-- isXAxis: true → arch spans Z axis; false → arch spans X axis
+	-- dir: +1 or -1, direction pointing TOWARD origin from entry face
+	local function pillarPos(offset)
+		if isXAxis then return Vector3.new(ex, ARCH_H/2, ez+offset)
+		else             return Vector3.new(ex+offset, ARCH_H/2, ez) end
+	end
+	local function stripPos(offset, y)
+		if isXAxis then return Vector3.new(ex, y, ez+offset)
+		else             return Vector3.new(ex+offset, y, ez) end
+	end
+	-- Pillars
+	for _,off in {-ARCH_W, ARCH_W} do
+		part(Vector3.new(4,ARCH_H,4), Color3.fromRGB(12,12,22), SMOOTH, pillarPos(off))
+		for i=0, ARCH_H-4, 8 do
+			ns(Vector3.new(4.4,0.5,4.4), color, stripPos(off, i+2))
+		end
+		light(part(Vector3.new(6,6,6), color, NEON, stripPos(off, ARCH_H+3)), color, 50, 6)
+	end
+	-- Crossbar
+	local cbSz = isXAxis and Vector3.new(4, 3.5, ARCH_W*2+6) or Vector3.new(ARCH_W*2+6, 3.5, 4)
+	part(cbSz, Color3.fromRGB(12,12,22), SMOOTH, Vector3.new(ex, ARCH_H+1.75, ez))
+	local cbNSz = isXAxis and Vector3.new(4.4, 0.4, ARCH_W*2+6.4) or Vector3.new(ARCH_W*2+6.4, 0.4, 4.4)
+	ns(cbNSz, color, Vector3.new(ex, ARCH_H+3.5, ez))
+	ns(cbNSz, color, Vector3.new(ex, ARCH_H+0.1, ez))
+	-- Sign panel
+	local spSz = isXAxis and Vector3.new(3.5, 8, ARCH_W*2-2) or Vector3.new(ARCH_W*2-2, 8, 3.5)
+	local sp = part(spSz, Color3.fromRGB(6,6,18), SMOOTH, Vector3.new(ex, ARCH_H-7, ez))
+	local spNSz = isXAxis and Vector3.new(3.7, 0.3, ARCH_W*2-1.6) or Vector3.new(ARCH_W*2-1.6, 0.3, 3.7)
+	ns(spNSz, color, Vector3.new(ex, ARCH_H-2.8, ez))
+	ns(spNSz, color, Vector3.new(ex, ARCH_H-11.1, ez))
+	local sgFace
+	if isXAxis then sgFace = dir > 0 and Enum.NormalId.Right or Enum.NormalId.Left
+	else            sgFace = dir > 0 and Enum.NormalId.Front or Enum.NormalId.Back end
+	local sg = Instance.new("SurfaceGui"); sg.Face=sgFace
+	sg.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; sg.PixelsPerStud=20; sg.Parent=sp
+	local lbl=Instance.new("TextLabel"); lbl.Size=UDim2.new(1,0,1,0); lbl.BackgroundTransparency=1
+	lbl.Text=name; lbl.TextColor3=color; lbl.Font=Enum.Font.GothamBlack; lbl.TextScaled=true; lbl.Parent=sg
+	-- Approach sign (55 studs toward origin from arch)
+	local ax = isXAxis and ex+dir*55 or ex
+	local az = isXAxis and ez       or ez+dir*55
+	local apSz = isXAxis and Vector3.new(3.5,5,22) or Vector3.new(22,5,3.5)
+	local apNSz= isXAxis and Vector3.new(3.7,0.3,22.4) or Vector3.new(22.4,0.3,3.7)
+	local ap=part(apSz, Color3.fromRGB(8,8,20), SMOOTH, Vector3.new(ax,8,az))
+	ns(apNSz, color, Vector3.new(ax,10.6,az))
+	local asg=Instance.new("SurfaceGui"); asg.Face=sgFace
+	asg.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; asg.PixelsPerStud=20; asg.Parent=ap
+	local albl=Instance.new("TextLabel"); albl.Size=UDim2.new(1,0,1,0); albl.BackgroundTransparency=1
+	local arrow
+	if isXAxis then arrow = dir < 0 and "▶ " or "◀ "
+	else            arrow = dir > 0 and "▼ " or "▲ " end
+	albl.Text=arrow..name; albl.TextColor3=color; albl.Font=Enum.Font.GothamBlack; albl.TextScaled=true; albl.Parent=asg
+end
+
 local function buildDistrict(cx,cz,name,color,size)
 	size=size or 80
 	local half=size/2
+	-- Ground platform
 	part(Vector3.new(size,0.5,size),Color3.fromRGB(12,12,22),SMOOTH,Vector3.new(cx,0.25,cz))
+	-- Neon border
 	ns(Vector3.new(size+0.4,0.4,0.4),color,Vector3.new(cx,0.6,cz-half))
 	ns(Vector3.new(size+0.4,0.4,0.4),color,Vector3.new(cx,0.6,cz+half))
 	ns(Vector3.new(0.4,0.4,size+0.4),color,Vector3.new(cx-half,0.6,cz))
 	ns(Vector3.new(0.4,0.4,size+0.4),color,Vector3.new(cx+half,0.6,cz))
+	-- Corner beacon towers
 	for _,sx in {-half,half} do for _,sz in {-half,half} do
 		part(Vector3.new(2,50,2),Color3.fromRGB(15,15,25),SMOOTH,Vector3.new(cx+sx,25,cz+sz))
 		light(part(Vector3.new(3,3,3),color,NEON,Vector3.new(cx+sx,51,cz+sz)),color,50,5)
 	end end
+	-- Center spire
 	part(Vector3.new(1.5,80,1.5),Color3.fromRGB(15,15,25),SMOOTH,Vector3.new(cx,40,cz))
 	light(part(Vector3.new(5,5,5),color,NEON,Vector3.new(cx,81,cz)),color,70,7)
-	-- Entry face pointing toward world origin
-	local sb,kiosk,sgFace
+	-- Arch entrance + approach sign
+	local kx,kz,dir
 	if math.abs(cx) >= math.abs(cz) then
-		local dir = cx > 0 and -1 or 1
+		dir = cx > 0 and -1 or 1
 		local ex = cx + dir*half
-		sgFace = dir > 0 and Enum.NormalId.Right or Enum.NormalId.Left
-		sb = part(Vector3.new(1,7,30),Color3.fromRGB(10,10,22),SMOOTH,Vector3.new(ex,11,cz))
-		ns(Vector3.new(1,0.3,30.4),color,Vector3.new(ex,14.7,cz))
-		kiosk = part(Vector3.new(6,10,4),Color3.fromRGB(12,12,22),SMOOTH,Vector3.new(cx+dir*(half-8),5,cz))
-		ns(Vector3.new(6.3,0.3,4.3),color,Vector3.new(cx+dir*(half-8),10.2,cz))
+		buildArch(ex, cz, true, dir, name, color)
+		kx = ex - dir*8; kz = cz  -- kiosk just inside arch
 	else
-		local dir = cz > 0 and -1 or 1
+		dir = cz > 0 and -1 or 1
 		local ez = cz + dir*half
-		sgFace = dir > 0 and Enum.NormalId.Front or Enum.NormalId.Back
-		sb = part(Vector3.new(30,7,1),Color3.fromRGB(10,10,22),SMOOTH,Vector3.new(cx,11,ez))
-		ns(Vector3.new(30.4,0.3,1),color,Vector3.new(cx,14.7,ez))
-		kiosk = part(Vector3.new(6,10,4),Color3.fromRGB(12,12,22),SMOOTH,Vector3.new(cx,5,cz+dir*(half-8)))
-		ns(Vector3.new(6.3,0.3,4.3),color,Vector3.new(cx,10.2,cz+dir*(half-8)))
+		buildArch(cx, ez, false, dir, name, color)
+		kx = cx; kz = ez - dir*8
 	end
-	local sg3=Instance.new("SurfaceGui"); sg3.Face=sgFace; sg3.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; sg3.PixelsPerStud=20; sg3.Parent=sb
-	local l3=Instance.new("TextLabel"); l3.Size=UDim2.new(1,0,1,0); l3.BackgroundTransparency=1; l3.Text=name; l3.TextColor3=color; l3.Font=Enum.Font.GothamBlack; l3.TextScaled=true; l3.Parent=sg3
-	local bb=Instance.new("BillboardGui"); bb.Size=UDim2.new(0,220,0,70); bb.StudsOffset=Vector3.new(0,9,0); bb.AlwaysOnTop=false; bb.MaxDistance=200; bb.Parent=kiosk
-	local bbl=Instance.new("TextLabel"); bbl.Size=UDim2.new(1,0,1,0); bbl.BackgroundTransparency=1; bbl.Text=name.."\n[E] ENTER"; bbl.TextColor3=color; bbl.Font=Enum.Font.GothamBlack; bbl.TextScaled=true; bbl.Parent=bb
-	return prompt(kiosk,name,Enum.KeyCode.E,30)
+	-- Kiosk with billboard + prompt
+	local kiosk=part(Vector3.new(5,7,3),Color3.fromRGB(12,12,22),SMOOTH,Vector3.new(kx,3.5,kz))
+	ns(Vector3.new(5.2,0.3,3.2),color,Vector3.new(kx,7.2,kz))
+	local screen=part(Vector3.new(3.5,4,0.2),Color3.fromRGB(0,20,30),SMOOTH,Vector3.new(kx,4.5,kz+(dir*-1.6)))
+	local sG=Instance.new("SurfaceGui"); sG.Face=Enum.NormalId.Front
+	sG.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; sG.PixelsPerStud=30; sG.Parent=screen
+	local sL=Instance.new("TextLabel"); sL.Size=UDim2.new(1,0,1,0); sL.BackgroundTransparency=1
+	sL.Text="PLAY\n"..name; sL.TextColor3=color; sL.Font=Enum.Font.GothamBlack; sL.TextScaled=true; sL.Parent=sG
+	local bb=Instance.new("BillboardGui"); bb.Size=UDim2.new(0,240,0,80)
+	bb.StudsOffset=Vector3.new(0,8,0); bb.AlwaysOnTop=false; bb.MaxDistance=250; bb.Parent=kiosk
+	local bbl=Instance.new("TextLabel"); bbl.Size=UDim2.new(1,0,1,0); bbl.BackgroundTransparency=1
+	bbl.Text=name.."\n[E] ENTER"; bbl.TextColor3=color; bbl.Font=Enum.Font.GothamBlack; bbl.TextScaled=true; bbl.Parent=bb
+	return prompt(kiosk,name,Enum.KeyCode.E,35)
 end
 local function buildArenaDecor()
 	local function dp(sz,col,mat,pos)  -- decorative, no collision
@@ -236,6 +303,15 @@ local function buildArenaDecor()
 		light(orb,oc,24,3)
 	end
 end
+-- District positions for mini-games (key -> {cx, cz, size}); name + color from GameRegistry
+local MINI_GAME_DISTRICTS = {
+	LAVA     = {cx=0,    cz=-250, size=90},
+	MAZE     = {cx=250,  cz=-200, size=90},
+	RHYTHM   = {cx=-250, cz=-200, size=90},
+	FLOOD    = {cx=-280, cz=50,   size=80},
+	ASTEROID = {cx=280,  cz=50,   size=80},
+}
+
 function WorldBuilder.Build()
 	local existing=workspace:FindFirstChild("OpenWorld"); if existing then existing:Destroy() end
 	folder=Instance.new("Folder"); folder.Name="OpenWorld"; folder.Parent=workspace
@@ -246,13 +322,18 @@ function WorldBuilder.Build()
 		{Vector3.new(W*2+4,60,4),Vector3.new(0,30,-W)},{Vector3.new(W*2+4,60,4),Vector3.new(0,30,W)},
 		{Vector3.new(4,60,W*2+4),Vector3.new(-W,30,0)},{Vector3.new(4,60,W*2+4),Vector3.new(W,30,0)},
 	} do local bw=part(d[1],Color3.new(0,0,0),SMOOTH,d[2]); bw.Transparency=1 end
-	local lavaPrompt=buildDistrict(0,-250,"LAVA FLOOR",Color3.fromRGB(255,80,0),90)
-	local mazePrompt=buildDistrict(250,-200,"NEON MAZE",Color3.fromRGB(180,0,255),90)
-	local rhythmPrompt=buildDistrict(-250,-200,"RHYTHM TILES",Color3.fromRGB(255,50,200),90)
-	local floodPrompt=buildDistrict(-280,50,"COLOR FLOOD",Color3.fromRGB(0,255,150),80)
-	local asteroidPrompt=buildDistrict(280,50,"ASTEROID BLAST",Color3.fromRGB(0,200,255),80)
+	local prompts = {SNAKE=snakePrompt}
+	for _, g in GameRegistry.GetAll() do
+		local key = g.key
+		if key ~= "SNAKE" then
+			local district = MINI_GAME_DISTRICTS[key]
+			if district then
+				prompts[key] = buildDistrict(district.cx, district.cz, g.name, g.color, district.size)
+			end
+		end
+	end
 	part(Vector3.new(80,20,80),Color3.fromRGB(10,10,20),CONCRETE,Vector3.new(280,10,50))
 	if not workspace:FindFirstChild("Dragon") then local df=Instance.new("Folder"); df.Name="Dragon"; df.Parent=workspace end
-	return {SNAKE=snakePrompt,LAVA=lavaPrompt,MAZE=mazePrompt,RHYTHM=rhythmPrompt,FLOOD=floodPrompt,ASTEROID=asteroidPrompt}
+	return prompts
 end
 return WorldBuilder

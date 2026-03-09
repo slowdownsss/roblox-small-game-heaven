@@ -8,8 +8,11 @@
       "TestLeaderboard": {
         "$path": "src/server/TestLeaderboard.server.luau"
       },
-      "SnakeGame": {
-        "$path": "src/server/SnakeGame"
+      "SGH_Hub": {
+        "$path": "src/server/SGH_Hub"
+      },
+      "Games": {
+        "$path": "src/server/Games"
       },
       "SGH_Core": {
         "$path": "src/server/SGH_Core"
