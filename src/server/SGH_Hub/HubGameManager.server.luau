@@ -37,22 +37,9 @@ spawn.CanCollide = true
 spawn.Neutral = true  -- must be true so all players can use it
 spawn.Parent = Workspace
 
-local Games = ServerScriptService:WaitForChild("Games")
-local Snake = Games:WaitForChild("Snake")
-local LeaderboardService = require(Snake:WaitForChild("LeaderboardService"))
-local SnakeController = require(Snake:WaitForChild("SnakeController"))
-local FoodManager = require(Snake:WaitForChild("FoodManager"))
-local ObstacleManager = require(Snake:WaitForChild("ObstacleManager"))
-local ScoreManagerMod = require(Snake:WaitForChild("ScoreManager"))
-
-local LavaGame = require(Games:WaitForChild("Lava"):WaitForChild("LavaGame"))
-local MazeGame = require(Games:WaitForChild("Maze"):WaitForChild("MazeGame"))
-local RhythmGame = require(Games:WaitForChild("Rhythm"):WaitForChild("RhythmGame"))
-local FloodGame = require(Games:WaitForChild("Flood"):WaitForChild("FloodGame"))
-local AsteroidGame = require(Games:WaitForChild("Asteroid"):WaitForChild("AsteroidGame"))
-local MiniGames = { LAVA = LavaGame, MAZE = MazeGame, RHYTHM = RhythmGame, FLOOD = FloodGame, ASTEROID = AsteroidGame }
-
--- Ensure Events exist (SnakeGame.Events — client expects this path)
+-- Ensure Events exist FIRST (SnakeGame.Events — client expects this path).
+-- Must be created before any module is required, since modules like ScoreManager
+-- would otherwise deadlock waiting for these events at require-time.
 local sgRS = ReplicatedStorage:WaitForChild("SnakeGame")
 local ev = sgRS:FindFirstChild("Events") or Instance.new("Folder", sgRS)
 ev.Name = "Events"
@@ -83,6 +70,22 @@ local DirectionInput = getOrMakeRE("DirectionInput")
 local ReturnToWorld = getOrMakeRE("ReturnToWorld")
 local StartMiniGameEvent = getOrMakeRE("StartMiniGame")
 local GetLeaderboard = getOrMakeRF("GetLeaderboard")
+
+-- Now safe to require game modules (Events already exist)
+local Games = ServerScriptService:WaitForChild("Games")
+local Snake = Games:WaitForChild("Snake")
+local LeaderboardService = require(Snake:WaitForChild("LeaderboardService"))
+local SnakeController = require(Snake:WaitForChild("SnakeController"))
+local FoodManager = require(Snake:WaitForChild("FoodManager"))
+local ObstacleManager = require(Snake:WaitForChild("ObstacleManager"))
+local ScoreManagerMod = require(Snake:WaitForChild("ScoreManager"))
+
+local LavaGame = require(Games:WaitForChild("Lava"):WaitForChild("LavaGame"))
+local MazeGame = require(Games:WaitForChild("Maze"):WaitForChild("MazeGame"))
+local RhythmGame = require(Games:WaitForChild("Rhythm"):WaitForChild("RhythmGame"))
+local FloodGame = require(Games:WaitForChild("Flood"):WaitForChild("FloodGame"))
+local AsteroidGame = require(Games:WaitForChild("Asteroid"):WaitForChild("AsteroidGame"))
+local MiniGames = { LAVA = LavaGame, MAZE = MazeGame, RHYTHM = RhythmGame, FLOOD = FloodGame, ASTEROID = AsteroidGame }
 
 GetLeaderboard.OnServerInvoke = function(player)
 	local data = LeaderboardService.GetLeaderboard({ maxEntries = 10, forUserId = player.UserId })

@@ -2,8 +2,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 local Config = require(ReplicatedStorage:WaitForChild("SnakeGame"):WaitForChild("Config"))
-local Events = ReplicatedStorage:WaitForChild("SnakeGame"):WaitForChild("Events")
-local ScoreUpdatedEvent = Events:WaitForChild("ScoreUpdated")
+
+-- Lazy lookup: Events folder is created by HubGameManager after all modules are required.
+-- Looking it up at module load time causes a deadlock, so we find it on first use instead.
+local _scoreUpdatedEvent
+local function getScoreUpdatedEvent()
+	if not _scoreUpdatedEvent then
+		local ev = ReplicatedStorage:FindFirstChild("SnakeGame")
+		ev = ev and ev:FindFirstChild("Events")
+		_scoreUpdatedEvent = ev and ev:FindFirstChild("ScoreUpdated")
+	end
+	return _scoreUpdatedEvent
+end
 
 local ScoreManager = {}
 ScoreManager.__index = ScoreManager
@@ -51,11 +61,14 @@ end
 
 function ScoreManager:_fireUpdate()
 	if self.player then
-		ScoreUpdatedEvent:FireClient(self.player, {
-			score = self.score,
-			comboCount = self.comboCount,
-			comboMultiplier = self.comboMultiplier,
-		})
+		local ev = getScoreUpdatedEvent()
+		if ev then
+			ev:FireClient(self.player, {
+				score = self.score,
+				comboCount = self.comboCount,
+				comboMultiplier = self.comboMultiplier,
+			})
+		end
 	end
 end
 
