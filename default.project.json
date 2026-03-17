@@ -31,6 +31,9 @@
 
     "StarterPlayer": {
       "$className": "StarterPlayer",
+      "$properties": {
+        "DevTouchMovementMode": { "Enum": 6 }
+      },
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "SnakeClient": {
